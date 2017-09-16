@@ -1,12 +1,16 @@
 #!/usr/bin/python
-from pushbullet import Pushbullet
-import praw, time, os, sys, traceback
+import praw, time, os, sys, traceback, twitter, string
 
 REDDIT_USER_AGENT = "hwswap-alert by /u/nl_eddie"
 
 def main():
-	pb = Pushbullet(os.environ['PUSHBULLET_TOKEN'])
-	reddit = praw.Reddit(client_id=os.environ['REDDIT_ID'], client_secret=os.environ['REDDIT_SECRET'], user_agent=REDDIT_USER_AGENT)
+	api = twitter.Api(consumer_key=os.environ['TWITTER_CONSUM_KEY'],
+                  consumer_secret=os.environ['TWITTER_CONSUM_SCRT'],
+                  access_token_key=os.environ['TWITTER_TKN_KEY'],
+                  access_token_secret=os.environ['TWITTER_TKN_SCRT'])
+	reddit = praw.Reddit(client_id=os.environ['REDDIT_ID'], 
+						 client_secret=os.environ['REDDIT_SECRET'], 
+						 user_agent=REDDIT_USER_AGENT)
 	hwswap = reddit.subreddit('hardwareswap')
 	curr_time = int(time.time()) - 180
 	new_posts = hwswap.new(limit=100)
@@ -30,9 +34,11 @@ def main():
 			if link_flair in flair.lower():
 				if all(word.lower() in title+selftext for word in keywords):
 					if len(watch_list) == 2:
-						push_title = unicode('[{}] '.format(post.link_flair_text) + ' '.join(keywords), errors='ignore')
-						push_link = 'https://www.reddit.com' + post.permalink
-						pb.push_link(push_title, push_link)
+						dm_title = '[{}] '.format(post.link_flair_text) + ' '.join(keywords) + '\n'
+						post_title = post.title + '\n'
+						post_link = 'https://www.reddit.com' + post.permalink
+						text = str(dm_title) + str(post_title) + str(post_link)
+						api.PostDirectMessage(text, screen_name="nay_linn")
 						break
 
 def parse_watch_lists(filename):
